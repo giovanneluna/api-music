@@ -14,9 +14,13 @@ Route::prefix('auth')->group(function () {
     Route::middleware('auth:sanctum')->post('/logout', [AuthController::class, 'logout']);
 });
 
-Route::apiResource('musics', MusicController::class);
+Route::apiResource('musics', MusicController::class)->only(['index', 'show']);
 
 Route::middleware('auth:sanctum')->group(function () {
+    Route::apiResource('musics', MusicController::class)
+        ->except(['index', 'show'])
+        ->middleware('admin');
+
     Route::apiResource('suggestions', SuggestionController::class);
 
     Route::post(

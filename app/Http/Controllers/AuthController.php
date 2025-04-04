@@ -17,10 +17,13 @@ class AuthController extends Controller
     public function register(RegisterRequest $request): JsonResponse
     {
         try {
+            $isFirstUser = User::count() === 0;
+
             $user = User::create([
                 'name' => $request->name,
                 'email' => $request->email,
                 'password' => Hash::make($request->password),
+                'is_admin' => $isFirstUser,
             ]);
 
             $token = $user->createToken('auth_token')->plainTextToken;

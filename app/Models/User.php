@@ -37,9 +37,6 @@ class User extends Authenticatable
         ];
     }
 
-    /**
-     * Accessor para manter compatibilidade com ambos 'admin' e 'is_admin'
-     */
     public function getAdminAttribute()
     {
         return $this->is_admin;
