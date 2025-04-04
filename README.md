@@ -4,7 +4,7 @@ Este é um sistema de gerenciamento de músicas que permite aos usuários sugeri
 
 ## Requisitos
 
-- PHP 8.3.4
+- Apartir do PHP 8.2
 - Composer
 - MySQL
 - Extensões PHP requeridas: BCMath, Ctype, Fileinfo, JSON, Mbstring, OpenSSL, PDO, Tokenizer, XML
