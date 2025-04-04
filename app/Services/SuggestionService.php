@@ -4,7 +4,6 @@ namespace App\Services;
 
 use App\Models\Suggestion;
 use App\Models\Music;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class SuggestionService
@@ -54,13 +53,34 @@ class SuggestionService
 
         try {
             $videoInfo = $this->getVideoInfo($youtube_id);
+            $isAdmin = $request->user()->is_admin;
 
             $suggestion = $request->user()->suggestions()->create([
                 'url' => $url,
                 'youtube_id' => $youtube_id,
                 'title' => $videoInfo['titulo'],
-                'status' => Suggestion::STATUS_PENDING,
+                'status' => $isAdmin ? Suggestion::STATUS_APPROVED : Suggestion::STATUS_PENDING,
             ]);
+
+            if ($isAdmin) {
+                $music = Music::create([
+                    'title' => $videoInfo['titulo'],
+                    'views' => $videoInfo['visualizacoes'],
+                    'youtube_id' => $youtube_id,
+                    'thumbnail' => $videoInfo['thumb'],
+                ]);
+
+                $suggestion->music_id = $music->id;
+                $suggestion->reason = 'Aprovação automática por administrador';
+                $suggestion->save();
+
+                return [
+                    'success' => true,
+                    'message' => 'Música adicionada com sucesso',
+                    'data' => $suggestion->load('music'),
+                    'status_code' => 201
+                ];
+            }
 
             return [
                 'success' => true,

@@ -12,7 +12,7 @@ return new class extends Migration
         Schema::create('music', function (Blueprint $table) {
             $table->id();
             $table->string('title')->comment('Título da música');
-            $table->integer('views')->default(0)->comment('Número de visualizações no YouTube');
+            $table->bigInteger('views')->default(0)->comment('Número de visualizações no YouTube');
             $table->string('youtube_id')->unique()->comment('ID do vídeo no YouTube');
             $table->string('thumbnail')->comment('URL da miniatura do vídeo');
             $table->timestamps();

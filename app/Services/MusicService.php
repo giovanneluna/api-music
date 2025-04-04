@@ -10,6 +10,11 @@ class MusicService
 {
     public function formatViews(int $number): string|int
     {
+
+        if ($number >= 1_000_000_000) {
+            return number_format($number / 1_000_000_000, 1) . 'B';
+        }
+
         if ($number >= 1_000_000) {
             return number_format($number / 1_000_000, 1) . 'M';
         }
@@ -28,7 +33,7 @@ class MusicService
             ->take($limit)
             ->get();
 
-        $music->each(function($music) {
+        $music->each(function ($music) {
             $music->views_formatted = $this->formatViews($music->views);
         });
 

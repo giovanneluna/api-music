@@ -22,5 +22,4 @@ class Music extends Model
     {
         return $this->hasMany(Suggestion::class, 'music_id');
     }
-
 }
