@@ -211,17 +211,13 @@ class SuggestionService
 
         curl_close($ch);
 
-        if (!preg_match('/<title>(.+?) - YouTube<\/title>/', $response, $titleMatches)) {
-            throw new \Exception("Não foi possível encontrar o título do vídeo");
-        }
-
-        $title = html_entity_decode($titleMatches[1], ENT_QUOTES);
-
-        $views = $this->extractViewCount($response);
+        $title = $this->extractVideoTitle($response);
 
         if (empty($title)) {
             throw new \Exception("Vídeo não encontrado ou indisponível");
         }
+
+        $views = $this->extractViewCount($response);
 
         return [
             'titulo' => $title,
@@ -229,6 +225,42 @@ class SuggestionService
             'youtube_id' => $videoId,
             'thumb' => "https://img.youtube.com/vi/{$videoId}/hqdefault.jpg",
         ];
+    }
+
+    /**
+     * Extrai o título do vídeo do YouTube usando vários padrões
+     *
+     * @param string $pageContent Conteúdo HTML da página do YouTube
+     * @return string|null Título do vídeo ou null se não encontrado
+     */
+    private function extractVideoTitle(string $pageContent): ?string
+    {
+        // Padrão 1: Tag title padrão
+        if (preg_match('/<title>(.+?) - YouTube<\/title>/', $pageContent, $titleMatches)) {
+            return html_entity_decode(trim($titleMatches[1]), ENT_QUOTES);
+        }
+
+        // Padrão 2: Metadados do Open Graph
+        if (preg_match('/<meta property="og:title" content="([^"]+)"/', $pageContent, $ogMatches)) {
+            return html_entity_decode(trim($ogMatches[1]), ENT_QUOTES);
+        }
+
+        // Padrão 3: Dados do meta name="title"
+        if (preg_match('/<meta name="title" content="([^"]+)"/', $pageContent, $metaMatches)) {
+            return html_entity_decode(trim($metaMatches[1]), ENT_QUOTES);
+        }
+
+        // Padrão 4: Dados estruturados JSON-LD (usado pelo YouTube recentemente)
+        if (preg_match('/"name"\s*:\s*"([^"]+)"/', $pageContent, $jsonMatches)) {
+            return html_entity_decode(trim($jsonMatches[1]), ENT_QUOTES);
+        }
+
+        // Padrão 5: Variável JavaScript videoDetails
+        if (preg_match('/videoDetails.*?"title"\s*:\s*"([^"]+)"/', $pageContent, $varMatches)) {
+            return html_entity_decode(str_replace('\\"', '"', trim($varMatches[1])), ENT_QUOTES);
+        }
+
+        return null;
     }
 
     private function extractViewCount(string $pageContent): int

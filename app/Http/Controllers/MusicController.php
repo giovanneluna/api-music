@@ -11,8 +11,7 @@ class MusicController extends Controller
 {
     public function __construct(
         protected MusicService $musicService
-    ) {
-    }
+    ) {}
 
     private function formatViews(int $number): string|int
     {
@@ -27,13 +26,29 @@ class MusicController extends Controller
         return $number;
     }
 
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
-        $music = $this->musicService->getTopMusics();
+        $perPage = $request->input('per_page', 15);
+        $page = $request->input('page', 1);
+
+        $musics = Music::orderBy('created_at', 'desc')
+            ->paginate($perPage);
 
         return response()->json([
             'status' => 'success',
-            'data' => $music,
+            'data' => $musics->items(),
+            'meta' => [
+                'current_page' => $musics->currentPage(),
+                'last_page' => $musics->lastPage(),
+                'per_page' => $musics->perPage(),
+                'total' => $musics->total()
+            ],
+            'links' => [
+                'first' => $musics->url(1),
+                'last' => $musics->url($musics->lastPage()),
+                'next' => $musics->nextPageUrl(),
+                'prev' => $musics->previousPageUrl()
+            ]
         ]);
     }
 

@@ -23,20 +23,37 @@ class SuggestionController extends Controller
     {
         $user = Auth::user();
         $perPage = $request->query('per_page', 15);
+        $status = $request->query('status');
 
-        if ($user->admin) {
-            $suggestions = Suggestion::with('user')
-                ->orderBy('created_at', 'desc')
-                ->paginate($perPage);
-        } else {
-            $suggestions = Suggestion::where('user_id', $user->id)
-                ->orderBy('created_at', 'desc')
-                ->paginate($perPage);
+        $query = Suggestion::with('user')->orderBy('created_at', 'desc');
+
+        if (!$user->admin) {
+            $query->where('user_id', $user->id);
         }
+
+        if ($status) {
+            $query->where('status', $status);
+        }
+
+        $suggestions = $query->paginate($perPage);
 
         return response()->json([
             'status' => 'success',
-            'data' => $suggestions,
+            'data' => [
+                'data' => $suggestions->items(),
+                'meta' => [
+                    'current_page' => $suggestions->currentPage(),
+                    'last_page' => $suggestions->lastPage(),
+                    'per_page' => $suggestions->perPage(),
+                    'total' => $suggestions->total()
+                ],
+                'links' => [
+                    'first' => $suggestions->url(1),
+                    'last' => $suggestions->url($suggestions->lastPage()),
+                    'next' => $suggestions->nextPageUrl(),
+                    'prev' => $suggestions->previousPageUrl()
+                ]
+            ],
             'is_admin' => $user->admin
         ]);
     }

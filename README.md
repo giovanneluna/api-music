@@ -1,66 +1,476 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# API Music - Sistema de Gerenciamento de Músicas
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Este é um sistema de gerenciamento de músicas que permite aos usuários sugerir músicas do YouTube, e aos administradores aprovar ou rejeitar essas sugestões.
 
-## About Laravel
+## Requisitos
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+- PHP 8.3.4
+- Composer
+- MySQL
+- Extensões PHP requeridas: BCMath, Ctype, Fileinfo, JSON, Mbstring, OpenSSL, PDO, Tokenizer, XML
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Instalação
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+1. Clone o repositório
+   ```
+   git clone https://github.com/giovanneluna/api-music.git
+   cd api-music
+   ```
 
-## Learning Laravel
+2. Instale as dependências
+   ```
+   composer install
+   ```
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+3. Configure o ambiente
+   - Copie o arquivo `.env.example` para `.env`
+   - Configure as variáveis de banco de dados no arquivo `.env`
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+4. Execute migrações e seeders
+   ```
+   php artisan migrate && php artisan db:seed
+   ```
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+5. Inicie o servidor de desenvolvimento
+   ```
+   php artisan serve
+   ```
 
-## Laravel Sponsors
+## Usuário Administrador
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+Um usuário administrador é automaticamente criado pelo seeder:
 
-### Premium Partners
+- **Email**: admin@sistema.com
+- **Senha**: senha_segura
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[WebReinvent](https://webreinvent.com/)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel/)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Jump24](https://jump24.co.uk)**
-- **[Redberry](https://redberry.international/laravel/)**
-- **[Active Logic](https://activelogic.com)**
-- **[byte5](https://byte5.de)**
-- **[OP.GG](https://op.gg)**
+## Comandos Úteis
 
-## Contributing
+### Promover um usuário para administrador
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+```
+php artisan user:promote usuario@exemplo.com
+```
 
-## Code of Conduct
+### Executar testes
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+Para rodar todos os testes:
+```
+php artisan test
+```
 
-## Security Vulnerabilities
+Para rodar testes específicos:
+```
+php artisan test --filter=AuthControllerTest
+php artisan test --filter=MusicControllerTest
+php artisan test --filter=SuggestionControllerTest
+php artisan test --filter=SuggestionStatusControllerTest
+```
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+## Endpoints da API
 
-## License
+### Autenticação
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+#### Registro de Usuário
+- **URL**: `/api/auth/register`
+- **Método**: `POST`
+- **Autenticação**: Não
+- **Body**:
+  ```json
+  {
+    "name": "Nome do Usuário",
+    "email": "usuario@exemplo.com",
+    "password": "senha123",
+    "password_confirmation": "senha123"
+  }
+  ```
+- **Resposta (201)**:
+  ```json
+  {
+    "status": "success",
+    "message": "Usuario registrado com sucesso",
+    "data": {
+      "id": 1,
+      "name": "Nome do Usuário",
+      "email": "usuario@exemplo.com",
+      "created_at": "2023-01-01T00:00:00.000000Z",
+      "is_admin": false
+    },
+    "token": "1|abcdefghijklmnopqrstuvwxyz"
+  }
+  ```
+
+#### Login
+- **URL**: `/api/auth/login`
+- **Método**: `POST`
+- **Autenticação**: Não
+- **Body**:
+  ```json
+  {
+    "email": "usuario@exemplo.com",
+    "password": "senha123"
+  }
+  ```
+- **Resposta (200)**:
+  ```json
+  {
+    "status": "success",
+    "message": "Login realizado com sucesso",
+    "data": {
+      "id": 1,
+      "name": "Nome do Usuário",
+      "email": "usuario@exemplo.com",
+      "created_at": "2023-01-01T00:00:00.000000Z",
+      "is_admin": false
+    },
+    "token": "1|abcdefghijklmnopqrstuvwxyz"
+  }
+  ```
+
+#### Obter Usuário Atual
+- **URL**: `/api/auth/user`
+- **Método**: `GET`
+- **Autenticação**: Sim
+- **Resposta (200)**:
+  ```json
+  {
+    "status": "success",
+    "data": {
+      "id": 1,
+      "name": "Nome do Usuário",
+      "email": "usuario@exemplo.com",
+      "created_at": "2023-01-01T00:00:00.000000Z",
+      "is_admin": false
+    }
+  }
+  ```
+
+#### Logout
+- **URL**: `/api/auth/logout`
+- **Método**: `POST`
+- **Autenticação**: Sim
+- **Resposta (200)**:
+  ```json
+  {
+    "status": "success",
+    "message": "Usuario deslogado com sucesso"
+  }
+  ```
+
+### Músicas
+
+#### Listar Músicas
+- **URL**: `/api/musics`
+- **Método**: `GET`
+- **Autenticação**: Não
+- **Parâmetros**:
+  - `per_page` (opcional): Quantidade de itens por página
+  - `page` (opcional): Número da página
+- **Resposta (200)**:
+  ```json
+  {
+    "status": "success",
+    "data": [
+      {
+        "id": 1,
+        "title": "Título da Música",
+        "youtube_id": "abcdefghijk",
+        "views": 5000,
+        "thumbnail": "https://img.youtube.com/vi/abcdefghijk/hqdefault.jpg",
+        "created_at": "2023-01-01T00:00:00.000000Z",
+        "updated_at": "2023-01-01T00:00:00.000000Z"
+      }
+    ],
+    "meta": {
+      "current_page": 1,
+      "last_page": 1,
+      "per_page": 15,
+      "total": 1
+    },
+    "links": {
+      "first": "http://localhost:8000/api/musics?page=1",
+      "last": "http://localhost:8000/api/musics?page=1",
+      "next": null,
+      "prev": null
+    }
+  }
+  ```
+
+#### Detalhes da Música
+- **URL**: `/api/musics/{id}`
+- **Método**: `GET`
+- **Autenticação**: Não
+- **Resposta (200)**:
+  ```json
+  {
+    "status": "success",
+    "data": {
+      "id": 1,
+      "title": "Título da Música",
+      "youtube_id": "abcdefghijk",
+      "views": 5000,
+      "views_formatted": "5K",
+      "thumbnail": "https://img.youtube.com/vi/abcdefghijk/hqdefault.jpg",
+      "created_at": "2023-01-01T00:00:00.000000Z",
+      "updated_at": "2023-01-01T00:00:00.000000Z"
+    }
+  }
+  ```
+
+#### Adicionar Música (Admin)
+- **URL**: `/api/musics`
+- **Método**: `POST`
+- **Autenticação**: Sim (Admin)
+- **Body**:
+  ```json
+  {
+    "title": "Título da Música",
+    "youtube_id": "abcdefghijk",
+    "views": 5000,
+    "thumbnail": "https://img.youtube.com/vi/abcdefghijk/hqdefault.jpg"
+  }
+  ```
+- **Resposta (201)**:
+  ```json
+  {
+    "status": "success",
+    "message": "Música adicionada com sucesso",
+    "data": {
+      "id": 1,
+      "title": "Título da Música",
+      "youtube_id": "abcdefghijk",
+      "views": 5000,
+      "thumbnail": "https://img.youtube.com/vi/abcdefghijk/hqdefault.jpg",
+      "created_at": "2023-01-01T00:00:00.000000Z",
+      "updated_at": "2023-01-01T00:00:00.000000Z"
+    }
+  }
+  ```
+
+#### Atualizar Música (Admin)
+- **URL**: `/api/musics/{id}`
+- **Método**: `PATCH`
+- **Autenticação**: Sim (Admin)
+- **Body**:
+  ```json
+  {
+    "title": "Novo Título da Música",
+    "views": 6000
+  }
+  ```
+- **Resposta (200)**:
+  ```json
+  {
+    "status": "success",
+    "message": "Música atualizada com sucesso",
+    "data": {
+      "id": 1,
+      "title": "Novo Título da Música",
+      "youtube_id": "abcdefghijk",
+      "views": 6000,
+      "views_formatted": "6K",
+      "thumbnail": "https://img.youtube.com/vi/abcdefghijk/hqdefault.jpg",
+      "created_at": "2023-01-01T00:00:00.000000Z",
+      "updated_at": "2023-01-01T00:00:00.000000Z"
+    }
+  }
+  ```
+
+#### Excluir Música (Admin)
+- **URL**: `/api/musics/{id}`
+- **Método**: `DELETE`
+- **Autenticação**: Sim (Admin)
+- **Resposta (200)**:
+  ```json
+  {
+    "status": "success",
+    "message": "Música excluída com sucesso"
+  }
+  ```
+
+### Sugestões
+
+#### Listar Sugestões
+- **URL**: `/api/suggestions`
+- **Método**: `GET`
+- **Autenticação**: Sim
+- **Observação**: Usuários normais veem apenas suas próprias sugestões, admins veem todas
+- **Parâmetros**:
+  - `per_page` (opcional): Quantidade de itens por página
+  - `status` (opcional): Filtrar por status ('pending', 'approved', 'rejected')
+- **Resposta (200)**:
+  ```json
+  {
+    "status": "success",
+    "data": {
+      "data": [
+        {
+          "id": 1,
+          "url": "https://www.youtube.com/watch?v=abcdefghijk",
+          "youtube_id": "abcdefghijk",
+          "title": "Título da Sugestão",
+          "status": "pending",
+          "user_id": 1,
+          "music_id": null,
+          "reason": null,
+          "created_at": "2023-01-01T00:00:00.000000Z",
+          "updated_at": "2023-01-01T00:00:00.000000Z",
+          "user": {
+            "id": 1,
+            "name": "Nome do Usuário",
+            "email": "usuario@exemplo.com"
+          }
+        }
+      ],
+      "meta": {
+        "current_page": 1,
+        "last_page": 1,
+        "per_page": 15,
+        "total": 1
+      },
+      "links": {
+        "first": "http://localhost:8000/api/suggestions?page=1",
+        "last": "http://localhost:8000/api/suggestions?page=1",
+        "next": null,
+        "prev": null
+      }
+    },
+    "is_admin": false
+  }
+  ```
+
+#### Criar Sugestão
+- **URL**: `/api/suggestions`
+- **Método**: `POST`
+- **Autenticação**: Sim
+- **Body**:
+  ```json
+  {
+    "url": "https://www.youtube.com/watch?v=abcdefghijk"
+  }
+  ```
+- **Resposta (201)**:
+  ```json
+  {
+    "status": "success",
+    "message": "Sugestão enviada com sucesso",
+    "data": {
+      "id": 1,
+      "url": "https://www.youtube.com/watch?v=abcdefghijk",
+      "youtube_id": "abcdefghijk",
+      "title": "Título do Vídeo do YouTube",
+      "status": "pending",
+      "user_id": 1,
+      "music_id": null,
+      "reason": null,
+      "created_at": "2023-01-01T00:00:00.000000Z",
+      "updated_at": "2023-01-01T00:00:00.000000Z"
+    }
+  }
+  ```
+
+#### Ver Detalhes da Sugestão
+- **URL**: `/api/suggestions/{id}`
+- **Método**: `GET`
+- **Autenticação**: Sim
+- **Observação**: Usuários podem ver apenas suas próprias sugestões, admins podem ver todas
+- **Resposta (200)**:
+  ```json
+  {
+    "status": "success",
+    "data": {
+      "id": 1,
+      "url": "https://www.youtube.com/watch?v=abcdefghijk",
+      "youtube_id": "abcdefghijk",
+      "title": "Título da Sugestão",
+      "status": "pending",
+      "user_id": 1,
+      "music_id": null,
+      "reason": null,
+      "created_at": "2023-01-01T00:00:00.000000Z",
+      "updated_at": "2023-01-01T00:00:00.000000Z",
+      "user": {
+        "id": 1,
+        "name": "Nome do Usuário",
+        "email": "usuario@exemplo.com"
+      }
+    }
+  }
+  ```
+
+#### Excluir Sugestão
+- **URL**: `/api/suggestions/{id}`
+- **Método**: `DELETE`
+- **Autenticação**: Sim
+- **Observação**: Usuários podem excluir apenas suas próprias sugestões pendentes, admins podem excluir qualquer sugestão pendente
+- **Resposta (200)**:
+  ```json
+  {
+    "status": "success",
+    "message": "Sugestão excluída com sucesso"
+  }
+  ```
+
+#### Atualizar Status da Sugestão (Admin)
+- **URL**: `/api/suggestions/{id}/status/{status}`
+- **Método**: `POST`
+- **Autenticação**: Sim (Admin)
+- **Parâmetros**:
+  - `status`: 'approved' ou 'rejected'
+- **Body (para rejeição)**:
+  ```json
+  {
+    "motivo": "Motivo da rejeição"
+  }
+  ```
+- **Resposta (200) para aprovação**:
+  ```json
+  {
+    "status": "success",
+    "message": "Sugestão aprovada com sucesso",
+    "data": {
+      "id": 1,
+      "url": "https://www.youtube.com/watch?v=abcdefghijk",
+      "youtube_id": "abcdefghijk",
+      "title": "Título da Sugestão",
+      "status": "approved",
+      "user_id": 1,
+      "music_id": 1,
+      "reason": "Motivo opcional da aprovação",
+      "created_at": "2023-01-01T00:00:00.000000Z",
+      "updated_at": "2023-01-01T00:00:00.000000Z",
+      "music": {
+        "id": 1,
+        "title": "Título da Música",
+        "youtube_id": "abcdefghijk",
+        "views": 5000,
+        "thumbnail": "https://img.youtube.com/vi/abcdefghijk/hqdefault.jpg"
+      }
+    }
+  }
+  ```
+- **Resposta (200) para rejeição**:
+  ```json
+  {
+    "status": "success",
+    "message": "Sugestão rejeitada com sucesso",
+    "data": {
+      "id": 1,
+      "url": "https://www.youtube.com/watch?v=abcdefghijk",
+      "youtube_id": "abcdefghijk",
+      "title": "Título da Sugestão",
+      "status": "rejected",
+      "user_id": 1,
+      "music_id": null,
+      "reason": "Motivo da rejeição",
+      "created_at": "2023-01-01T00:00:00.000000Z",
+      "updated_at": "2023-01-01T00:00:00.000000Z"
+    }
+  }
+  ```
+
+## Notas Adicionais
+
+- Todas as rotas de API retornam respostas no formato JSON
+- A autenticação é feita através de token Bearer usando Laravel Sanctum
+- Os administradores têm acesso a todas as funcionalidades, enquanto usuários normais têm acesso limitado
+- As sugestões de músicas passam por um processo de validação de URL do YouTube
