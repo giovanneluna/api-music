@@ -25,11 +25,13 @@ class SuggestionStatusControllerTest extends TestCase
         $this->admin = User::factory()->create(['is_admin' => true]);
         $this->user = User::factory()->create(['is_admin' => false]);
 
+        $youtube_id = 'test123';
         $this->pendingSuggestion = Suggestion::factory()->create([
             'user_id' => $this->user->id,
             'status' => 'pending',
-            'youtube_id' => 'test123',
+            'youtube_id' => $youtube_id,
             'title' => 'Test Video',
+            'url' => "https://www.youtube.com/watch?v={$youtube_id}"
         ]);
     }
 
@@ -134,9 +136,12 @@ class SuggestionStatusControllerTest extends TestCase
      */
     public function test_cannot_update_already_processed_suggestion(): void
     {
+        $youtube_id = 'approved_' . uniqid();
         $processedSuggestion = Suggestion::factory()->create([
             'user_id' => $this->user->id,
             'status' => 'approved',
+            'youtube_id' => $youtube_id,
+            'url' => "https://www.youtube.com/watch?v={$youtube_id}"
         ]);
 
         $this->mock(\App\Services\SuggestionService::class, function ($mock) {
@@ -165,8 +170,10 @@ class SuggestionStatusControllerTest extends TestCase
      */
     public function test_approval_creates_music_record(): void
     {
+        $youtube_id = $this->pendingSuggestion->youtube_id;
+
         $music = Music::factory()->create([
-            'youtube_id' => 'test123',
+            'youtube_id' => $youtube_id,
             'title' => 'Test Video'
         ]);
 
@@ -195,7 +202,7 @@ class SuggestionStatusControllerTest extends TestCase
 
         $this->assertDatabaseHas('music', [
             'id' => $music->id,
-            'youtube_id' => 'test123'
+            'youtube_id' => $youtube_id
         ]);
     }
 }
