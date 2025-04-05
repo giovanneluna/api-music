@@ -5,12 +5,12 @@ namespace App\Services;
 use App\Models\Music;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 class MusicService
 {
-    public function formatViews(int $number): string|int
+    public function formatViews(int $number): string
     {
-
         if ($number >= 1_000_000_000) {
             return number_format($number / 1_000_000_000, 1) . 'B';
         }
@@ -23,26 +23,32 @@ class MusicService
             return number_format($number / 1_000, 1) . 'K';
         }
 
-        return $number;
+        return (string)$number;
+    }
+
+    public function getPaginatedMusic(Request $request): LengthAwarePaginator
+    {
+        $perPage = $request->input('per_page', 15);
+
+        return Music::orderBy('created_at', 'desc')
+            ->paginate($perPage);
+    }
+
+    public function formatCollection(Collection $collection): Collection
+    {
+        return $collection;
     }
 
     public function getTopMusics(int $limit = 5): Collection
     {
-        $music = Music::query()
+        return Music::query()
             ->orderByDesc('views')
             ->take($limit)
             ->get();
-
-        $music->each(function ($music) {
-            $music->views_formatted = $this->formatViews($music->views);
-        });
-
-        return $music;
     }
 
     public function getMusicWithFormattedViews(Music $music): Music
     {
-        $music->views_formatted = $this->formatViews($music->views);
         return $music;
     }
 
@@ -54,13 +60,17 @@ class MusicService
     public function updateMusic(Music $music, array $data): Music
     {
         $music->update($data);
-        $music->views_formatted = $this->formatViews($music->views);
         return $music;
     }
 
     public function deleteMusic(Music $music): bool
     {
-        return $music->delete();
+        try {
+            return $music->delete();
+        } catch (\Exception $e) {
+            report($e);
+            return false;
+        }
     }
 
     public function validateCreateRequest(Request $request): array

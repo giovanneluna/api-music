@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\Music;
 use App\Services\MusicService;
+use App\Http\Resources\MusicResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\JsonResource;
 
 class MusicController extends Controller
 {
@@ -13,30 +15,13 @@ class MusicController extends Controller
         protected MusicService $musicService
     ) {}
 
-    private function formatViews(int $number): string|int
-    {
-        if ($number >= 1_000_000) {
-            return number_format($number / 1_000_000, 1) . 'M';
-        }
-
-        if ($number >= 1_000) {
-            return number_format($number / 1_000, 1) . 'K';
-        }
-
-        return $number;
-    }
-
     public function index(Request $request): JsonResponse
     {
-        $perPage = $request->input('per_page', 15);
-        $page = $request->input('page', 1);
-
-        $musics = Music::orderBy('created_at', 'desc')
-            ->paginate($perPage);
+        $musics = $this->musicService->getPaginatedMusic($request);
 
         return response()->json([
             'status' => 'success',
-            'data' => $musics->items(),
+            'data' => MusicResource::collection($musics->items()),
             'meta' => [
                 'current_page' => $musics->currentPage(),
                 'last_page' => $musics->lastPage(),
@@ -54,11 +39,9 @@ class MusicController extends Controller
 
     public function show(Music $music): JsonResponse
     {
-        $music = $this->musicService->getMusicWithFormattedViews($music);
-
         return response()->json([
             'status' => 'success',
-            'data' => $music,
+            'data' => new MusicResource($music),
         ]);
     }
 
@@ -71,7 +54,7 @@ class MusicController extends Controller
         return response()->json([
             'status' => 'success',
             'message' => 'Música adicionada com sucesso',
-            'data' => $music,
+            'data' => new MusicResource($music),
         ], 201);
     }
 
@@ -84,13 +67,20 @@ class MusicController extends Controller
         return response()->json([
             'status' => 'success',
             'message' => 'Música atualizada com sucesso',
-            'data' => $music,
+            'data' => new MusicResource($music),
         ]);
     }
 
     public function destroy(Music $music): JsonResponse
     {
-        $this->musicService->deleteMusic($music);
+        $result = $this->musicService->deleteMusic($music);
+
+        if (!$result) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Erro ao excluir a música',
+            ], 500);
+        }
 
         return response()->json([
             'status' => 'success',
