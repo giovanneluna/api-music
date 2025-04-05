@@ -29,9 +29,24 @@ class MusicService
     public function getPaginatedMusic(Request $request): LengthAwarePaginator
     {
         $perPage = $request->input('per_page', 15);
+        $sortBy = $request->input('sort_by', 'created_at');
+        $sortDirection = $request->input('sort_direction', 'desc');
+        $excludeIds = $request->input('exclude_ids', '');
 
-        return Music::orderBy('created_at', 'desc')
-            ->paginate($perPage);
+        $query = Music::query();
+
+        if (in_array($sortBy, ['views', 'created_at', 'title'])) {
+            $query->orderBy($sortBy, $sortDirection === 'asc' ? 'asc' : 'desc');
+        } else {
+            $query->orderBy('created_at', 'desc');
+        }
+
+        if (!empty($excludeIds)) {
+            $excludeIdsArray = is_array($excludeIds) ? $excludeIds : explode(',', $excludeIds);
+            $query->whereNotIn('id', $excludeIdsArray);
+        }
+
+        return $query->paginate($perPage);
     }
 
     public function formatCollection(Collection $collection): Collection
@@ -39,10 +54,10 @@ class MusicService
         return $collection;
     }
 
-    public function getTopMusics(int $limit = 5): Collection
+    public function getTopMusics(int $limit = 5, string $sortDirection = 'desc'): Collection
     {
         return Music::query()
-            ->orderByDesc('views')
+            ->orderBy('views', $sortDirection)
             ->take($limit)
             ->get();
     }

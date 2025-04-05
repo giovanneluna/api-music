@@ -19,9 +19,9 @@ class SuggestionSeeder extends Seeder
         }
 
         Suggestion::create([
-            'url' => 'https://www.youtube.com/watch?v=5FrhtahQiRc',
-            'youtube_id' => '5FrhtahQiRc',
-            'title' => 'Heavy Is The Crown ft. Linkin Park (videoclipe oficial)',
+            'url' => 'https://www.youtube.com/watch?v=lkQaLTnmNFw',
+            'youtube_id' => 'lkQaLTnmNFw',
+            'title' => 'Boi Soberano',
             'status' => Suggestion::STATUS_APPROVED,
             'reason' => 'Ótima música, aprovada!',
             'user_id' => $users->first()->id,
