@@ -32,6 +32,7 @@ class MusicFactory extends Factory
         return [
             'title' => fake()->sentence(4),
             'views' => fake()->numberBetween(1000, 2000000),
+            'likes' => fake()->numberBetween(100, 100000),
             'youtube_id' => $youtubeId,
             'thumbnail' => "https://img.youtube.com/vi/{$youtubeId}/hqdefault.jpg",
             'created_at' => fake()->dateTimeBetween('-1 year', 'now'),
@@ -56,6 +57,15 @@ class MusicFactory extends Factory
         return $this->state(function (array $attributes) use ($viewCount) {
             return [
                 'views' => $viewCount,
+            ];
+        });
+    }
+
+    public function withLikes(int $likeCount): static
+    {
+        return $this->state(function (array $attributes) use ($likeCount) {
+            return [
+                'likes' => $likeCount,
             ];
         });
     }

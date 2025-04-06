@@ -15,21 +15,32 @@ class Music extends Model
     protected $fillable = [
         'title',
         'views',
+        'likes',
         'youtube_id',
         'thumbnail',
     ];
 
     protected $casts = [
         'views' => 'integer',
+        'likes' => 'integer',
     ];
 
     protected $appends = [
         'views_formatted',
+        'likes_formatted',
     ];
 
     public function getViewsFormattedAttribute(): string
     {
         return app(MusicService::class)->formatViews($this->views);
+    }
+
+    public function getLikesFormattedAttribute(): string
+    {
+        if ($this->likes === null) {
+            return '0';
+        }
+        return app(MusicService::class)->formatLikes($this->likes);
     }
 
     public function suggestions()

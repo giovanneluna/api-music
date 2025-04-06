@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Suggestion;
 use App\Models\Music;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
 
 class SuggestionService
 {
@@ -14,7 +15,7 @@ class SuggestionService
         '/youtube\.com\/embed\/([^?]+)/',
     ];
 
-    private const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36';
+    private const YOUTUBE_API_KEY = 'AIzaSyA8dWM62kVaGZy89nHiTVoINB5cu3SHpqY';
 
     public function processSuggestion(Request $request): array
     {
@@ -54,25 +55,34 @@ class SuggestionService
         try {
             $videoInfo = $this->getVideoInfo($youtube_id);
             $isAdmin = $request->user()->is_admin;
+            $status = $isAdmin ? Suggestion::STATUS_APPROVED : Suggestion::STATUS_PENDING;
 
             $suggestion = $request->user()->suggestions()->create([
                 'url' => $url,
                 'youtube_id' => $youtube_id,
                 'title' => $videoInfo['titulo'],
-                'status' => $isAdmin ? Suggestion::STATUS_APPROVED : Suggestion::STATUS_PENDING,
+                'status' => $status,
             ]);
 
             if ($isAdmin) {
-                $music = Music::create([
-                    'title' => $videoInfo['titulo'],
-                    'views' => $videoInfo['visualizacoes'],
-                    'youtube_id' => $youtube_id,
-                    'thumbnail' => $videoInfo['thumb'],
-                ]);
+                $existingMusic = Music::where('youtube_id', $youtube_id)->first();
 
-                $suggestion->music_id = $music->id;
-                $suggestion->reason = 'Aprovação automática por administrador';
-                $suggestion->save();
+                if (!$existingMusic) {
+                    $music = Music::create([
+                        'title' => $videoInfo['titulo'],
+                        'views' => $videoInfo['visualizacoes'],
+                        'youtube_id' => $youtube_id,
+                        'thumbnail' => $videoInfo['thumb'],
+                    ]);
+
+                    $suggestion->music_id = $music->id;
+                    $suggestion->reason = 'Aprovação automática por administrador';
+                    $suggestion->save();
+                } else {
+                    $suggestion->music_id = $existingMusic->id;
+                    $suggestion->reason = 'Aprovação automática por administrador';
+                    $suggestion->save();
+                }
 
                 return [
                     'success' => true,
@@ -107,10 +117,10 @@ class SuggestionService
             ];
         }
 
-        if ($suggestion->status !== Suggestion::STATUS_PENDING) {
+        if ($suggestion->status !== Suggestion::STATUS_PENDING && $suggestion->status === $status) {
             return [
                 'success' => false,
-                'message' => 'Sugestão já foi processada',
+                'message' => 'Sugestão já foi processada com este status',
                 'status_code' => 422
             ];
         }
@@ -131,22 +141,25 @@ class SuggestionService
     private function approve(Request $request, Suggestion $suggestion): array
     {
         try {
-            $music = Music::where('youtube_id', $suggestion->youtube_id)->first();
+            if (!$suggestion->music_id) {
+                $music = Music::where('youtube_id', $suggestion->youtube_id)->first();
 
-            if (!$music) {
-                $videoInfo = $this->getVideoInfo($suggestion->youtube_id);
+                if (!$music) {
+                    $videoInfo = $this->getVideoInfo($suggestion->youtube_id);
 
-                $music = Music::create([
-                    'title' => $videoInfo['titulo'],
-                    'views' => $videoInfo['visualizacoes'],
-                    'youtube_id' => $suggestion->youtube_id,
-                    'thumbnail' => $videoInfo['thumb'],
-                ]);
+                    $music = Music::create([
+                        'title' => $videoInfo['titulo'],
+                        'views' => $videoInfo['visualizacoes'],
+                        'youtube_id' => $suggestion->youtube_id,
+                        'thumbnail' => $videoInfo['thumb'],
+                    ]);
+                }
+
+                $suggestion->music_id = $music->id;
             }
 
             $suggestion->status = Suggestion::STATUS_APPROVED;
-            $suggestion->music_id = $music->id;
-            $suggestion->reason = $request->motivo;
+            $suggestion->reason = $request->motivo ?? $suggestion->reason ?? 'Aprovada pelo administrador';
             $suggestion->save();
 
             return [
@@ -178,7 +191,7 @@ class SuggestionService
         ];
     }
 
-    private function extractVideoId(string $url): ?string
+    public function extractVideoId(string $url): ?string
     {
         foreach (self::YOUTUBE_PATTERNS as $pattern) {
             if (preg_match($pattern, $url, $matches)) {
@@ -189,79 +202,44 @@ class SuggestionService
         return null;
     }
 
-    private function getVideoInfo(string $videoId): array
+    public function getVideoInfo(string $videoId): array
     {
-        $url = "https://www.youtube.com/watch?v={$videoId}";
+        try {
+            $response = Http::get('https://www.googleapis.com/youtube/v3/videos', [
+                'id' => $videoId,
+                'key' => self::YOUTUBE_API_KEY,
+                'part' => 'snippet,statistics',
+            ]);
 
-        $ch = curl_init();
-        curl_setopt_array($ch, [
-            CURLOPT_URL => $url,
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_FOLLOWLOCATION => true,
-            CURLOPT_SSL_VERIFYPEER => false,
-            CURLOPT_USERAGENT => self::USER_AGENT,
-        ]);
+            if ($response->failed()) {
+                throw new \Exception('Falha ao acessar a API do YouTube: ' . $response->status());
+            }
 
-        $response = curl_exec($ch);
+            $data = $response->json();
 
-        if ($response === false) {
-            curl_close($ch);
-            throw new \Exception("Erro ao acessar o YouTube: " . curl_error($ch));
+            if (empty($data['items'])) {
+                throw new \Exception('Vídeo não encontrado ou indisponível');
+            }
+
+            $videoData = $data['items'][0];
+            $snippet = $videoData['snippet'];
+            $statistics = $videoData['statistics'];
+
+            $title = $snippet['title'];
+            $viewCount = isset($statistics['viewCount']) ? (int)$statistics['viewCount'] : 0;
+
+            $thumbnail = $snippet['thumbnails']['high']['url'] ??
+                ($snippet['thumbnails']['medium']['url'] ??
+                    $snippet['thumbnails']['default']['url']);
+
+            return [
+                'titulo' => $title,
+                'visualizacoes' => $viewCount,
+                'youtube_id' => $videoId,
+                'thumb' => $thumbnail,
+            ];
+        } catch (\Exception $e) {
+            throw new \Exception('Erro ao obter informações do vídeo: ' . $e->getMessage());
         }
-
-        curl_close($ch);
-
-        $title = $this->extractVideoTitle($response);
-
-        if (empty($title)) {
-            throw new \Exception("Vídeo não encontrado ou indisponível");
-        }
-
-        $views = $this->extractViewCount($response);
-
-        return [
-            'titulo' => $title,
-            'visualizacoes' => $views,
-            'youtube_id' => $videoId,
-            'thumb' => "https://img.youtube.com/vi/{$videoId}/hqdefault.jpg",
-        ];
-    }
-
-    private function extractVideoTitle(string $pageContent): ?string
-    {
-        if (preg_match('/<title>(.+?) - YouTube<\/title>/', $pageContent, $titleMatches)) {
-            return html_entity_decode(trim($titleMatches[1]), ENT_QUOTES);
-        }
-
-        if (preg_match('/<meta property="og:title" content="([^"]+)"/', $pageContent, $ogMatches)) {
-            return html_entity_decode(trim($ogMatches[1]), ENT_QUOTES);
-        }
-
-        if (preg_match('/<meta name="title" content="([^"]+)"/', $pageContent, $metaMatches)) {
-            return html_entity_decode(trim($metaMatches[1]), ENT_QUOTES);
-        }
-
-        if (preg_match('/"name"\s*:\s*"([^"]+)"/', $pageContent, $jsonMatches)) {
-            return html_entity_decode(trim($jsonMatches[1]), ENT_QUOTES);
-        }
-
-        if (preg_match('/videoDetails.*?"title"\s*:\s*"([^"]+)"/', $pageContent, $varMatches)) {
-            return html_entity_decode(str_replace('\\"', '"', trim($varMatches[1])), ENT_QUOTES);
-        }
-
-        return null;
-    }
-
-    private function extractViewCount(string $pageContent): int
-    {
-        if (preg_match('/"viewCount":\s*"(\d+)"/', $pageContent, $viewMatches)) {
-            return (int)$viewMatches[1];
-        }
-
-        if (preg_match('/\"viewCount\"\s*:\s*{.*?\"simpleText\"\s*:\s*\"([\d,\.]+)\"/', $pageContent, $viewMatches)) {
-            return (int)str_replace(['.', ','], '', $viewMatches[1]);
-        }
-
-        return 0;
     }
 }

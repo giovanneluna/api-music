@@ -287,6 +287,55 @@ php artisan test --filter=SuggestionStatusControllerTest
   }
   ```
 
+#### Atualizar Dados do YouTube (Admin)
+- **URL**: `/api/musics/{id}/refresh`
+- **Método**: `POST`
+- **Autenticação**: Sim (Admin)
+- **Resposta (200)**:
+  ```json
+  {
+    "status": "success",
+    "message": "Dados do vídeo atualizados com sucesso",
+    "data": {
+      "id": 1,
+      "title": "Título da Música",
+      "youtube_id": "abcdefghijk",
+      "views": 10000,
+      "views_formatted": "10K",
+      "likes": 1000,
+      "likes_formatted": "1K",
+      "thumbnail": "https://img.youtube.com/vi/abcdefghijk/hqdefault.jpg",
+      "created_at": "2023-01-01T00:00:00.000000Z",
+      "updated_at": "2023-01-01T00:00:00.000000Z"
+    }
+  }
+  ```
+
+### Informações de Vídeo do YouTube
+
+#### Obter Informações de Vídeo (Para Sugestões)
+- **URL**: `/api/youtube/info`
+- **Método**: `POST`
+- **Autenticação**: Sim
+- **Body**:
+  ```json
+  {
+    "youtube_url": "https://www.youtube.com/watch?v=abcdefghijk"
+  }
+  ```
+- **Resposta (200)**:
+  ```json
+  {
+    "status": "success",
+    "data": {
+      "titulo": "Título do Vídeo",
+      "visualizacoes": 5000,
+      "youtube_id": "abcdefghijk",
+      "thumb": "https://img.youtube.com/vi/abcdefghijk/hqdefault.jpg"
+    }
+  }
+  ```
+
 ### Sugestões
 
 #### Listar Sugestões

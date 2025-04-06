@@ -13,6 +13,7 @@ return new class extends Migration
             $table->id();
             $table->string('title')->comment('Título da música');
             $table->bigInteger('views')->default(0)->comment('Número de visualizações no YouTube');
+            $table->bigInteger('likes')->default(0)->comment('Número de likes no YouTube');
             $table->string('youtube_id')->unique()->comment('ID do vídeo no YouTube');
             $table->string('thumbnail')->comment('URL da miniatura do vídeo');
             $table->timestamps();

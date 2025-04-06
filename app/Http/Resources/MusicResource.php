@@ -15,6 +15,8 @@ class MusicResource extends JsonResource
             'youtube_id' => $this->youtube_id,
             'views' => $this->views,
             'views_formatted' => $this->views_formatted,
+            'likes' => $this->likes,
+            'likes_formatted' => $this->likes_formatted,
             'thumbnail' => $this->thumbnail,
             'created_at' => $this->created_at,
         ];

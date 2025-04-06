@@ -21,10 +21,15 @@ Route::middleware('auth:sanctum')->group(function () {
         ->except(['index', 'show'])
         ->middleware('admin');
 
+    Route::post('musics/{music}/refresh', [MusicController::class, 'refresh'])
+        ->middleware('admin');
+
     Route::apiResource('suggestions', SuggestionController::class);
 
     Route::post(
         'suggestions/{suggestion}/status/{status}',
         SuggestionStatusController::class
     );
+
+    Route::post('youtube/info', [SuggestionController::class, 'getVideoInfo']);
 });

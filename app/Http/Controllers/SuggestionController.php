@@ -123,4 +123,37 @@ class SuggestionController extends Controller
             'message' => 'Não autorizado a excluir esta sugestão',
         ], 403);
     }
+
+    public function getVideoInfo(Request $request): JsonResponse
+    {
+        $validation = $request->validate([
+            'youtube_url' => 'required|url',
+        ], [
+            'youtube_url.required' => 'A URL do YouTube é obrigatória',
+            'youtube_url.url' => 'Uma URL válida deve ser fornecida'
+        ]);
+
+        try {
+            $youtubeId = $this->suggestionService->extractVideoId($request->youtube_url);
+
+            if (!$youtubeId) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'URL do YouTube inválida',
+                ], 422);
+            }
+
+            $videoInfo = $this->suggestionService->getVideoInfo($youtubeId);
+
+            return response()->json([
+                'status' => 'success',
+                'data' => $videoInfo
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => $e->getMessage(),
+            ], 422);
+        }
+    }
 }

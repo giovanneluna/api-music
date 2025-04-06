@@ -12,11 +12,18 @@ class SuggestionSeeder extends Seeder
     public function run(): void
     {
         $users = User::all();
-        $musics = Music::all();
 
-        if ($users->isEmpty() || $musics->isEmpty()) {
+        if ($users->isEmpty()) {
             return;
         }
+
+        $music = Music::create([
+            'title' => 'Boi Soberano',
+            'views' => 47000000,
+            'likes' => 350000,
+            'youtube_id' => 'lkQaLTnmNFw',
+            'thumbnail' => 'https://img.youtube.com/vi/lkQaLTnmNFw/hqdefault.jpg',
+        ]);
 
         Suggestion::create([
             'url' => 'https://www.youtube.com/watch?v=lkQaLTnmNFw',
@@ -25,7 +32,7 @@ class SuggestionSeeder extends Seeder
             'status' => Suggestion::STATUS_APPROVED,
             'reason' => 'Ótima música, aprovada!',
             'user_id' => $users->first()->id,
-            'music_id' => $musics->first()->id,
+            'music_id' => $music->id,
         ]);
 
         Suggestion::create([

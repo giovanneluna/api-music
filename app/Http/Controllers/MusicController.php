@@ -47,28 +47,76 @@ class MusicController extends Controller
 
     public function store(Request $request): JsonResponse
     {
-        $validated = $this->musicService->validateCreateRequest($request);
+        try {
+            $validated = $this->musicService->validateCreateRequest($request);
 
-        $music = $this->musicService->createMusic($validated);
+            $music = $this->musicService->createMusic($validated);
 
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Música adicionada com sucesso',
-            'data' => new MusicResource($music),
-        ], 201);
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Música adicionada com sucesso',
+                'data' => new MusicResource($music),
+            ], 201);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Erro de validação',
+                'errors' => $e->errors(),
+            ], 422);
+        } catch (\Exception $e) {
+            $message = $e->getMessage();
+
+            if (strpos($message, 'já existe na base de dados') !== false) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Erro de validação',
+                    'errors' => [
+                        'youtube_id' => ['Este vídeo já existe na base de dados.']
+                    ]
+                ], 422);
+            }
+
+            if (strpos($message, 'Erro ao obter informações do vídeo') !== false) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => $message,
+                    'errors' => [
+                        'youtube_id' => [$message]
+                    ]
+                ], 422);
+            }
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Erro ao adicionar música: ' . $message,
+            ], 500);
+        }
     }
 
     public function update(Request $request, Music $music): JsonResponse
     {
-        $validated = $this->musicService->validateUpdateRequest($request, $music);
+        try {
+            $validated = $this->musicService->validateUpdateRequest($request, $music);
 
-        $music = $this->musicService->updateMusic($music, $validated);
+            $music = $this->musicService->updateMusic($music, $validated);
 
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Música atualizada com sucesso',
-            'data' => new MusicResource($music),
-        ]);
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Música atualizada com sucesso',
+                'data' => new MusicResource($music),
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Erro de validação',
+                'errors' => $e->errors(),
+            ], 422);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Erro ao atualizar música: ' . $e->getMessage(),
+            ], 500);
+        }
     }
 
     public function destroy(Music $music): JsonResponse
@@ -85,6 +133,17 @@ class MusicController extends Controller
         return response()->json([
             'status' => 'success',
             'message' => 'Música excluída com sucesso',
+        ]);
+    }
+
+    public function refresh(Music $music): JsonResponse
+    {
+        $updatedMusic = $this->musicService->refreshVideoData($music);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Dados do vídeo atualizados com sucesso',
+            'data' => new MusicResource($updatedMusic),
         ]);
     }
 }
