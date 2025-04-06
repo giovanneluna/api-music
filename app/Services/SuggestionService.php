@@ -54,43 +54,21 @@ class SuggestionService
 
         try {
             $videoInfo = $this->getVideoInfo($youtube_id);
-            $isAdmin = $request->user()->is_admin;
-            $status = $isAdmin ? Suggestion::STATUS_APPROVED : Suggestion::STATUS_PENDING;
+
+            if ($request->user()->is_admin) {
+                return [
+                    'success' => false,
+                    'message' => 'Administradores devem adicionar músicas diretamente',
+                    'status_code' => 422
+                ];
+            }
 
             $suggestion = $request->user()->suggestions()->create([
                 'url' => $url,
                 'youtube_id' => $youtube_id,
                 'title' => $videoInfo['titulo'],
-                'status' => $status,
+                'status' => Suggestion::STATUS_PENDING,
             ]);
-
-            if ($isAdmin) {
-                $existingMusic = Music::where('youtube_id', $youtube_id)->first();
-
-                if (!$existingMusic) {
-                    $music = Music::create([
-                        'title' => $videoInfo['titulo'],
-                        'views' => $videoInfo['visualizacoes'],
-                        'youtube_id' => $youtube_id,
-                        'thumbnail' => $videoInfo['thumb'],
-                    ]);
-
-                    $suggestion->music_id = $music->id;
-                    $suggestion->reason = 'Aprovação automática por administrador';
-                    $suggestion->save();
-                } else {
-                    $suggestion->music_id = $existingMusic->id;
-                    $suggestion->reason = 'Aprovação automática por administrador';
-                    $suggestion->save();
-                }
-
-                return [
-                    'success' => true,
-                    'message' => 'Música adicionada com sucesso',
-                    'data' => $suggestion->load('music'),
-                    'status_code' => 201
-                ];
-            }
 
             return [
                 'success' => true,

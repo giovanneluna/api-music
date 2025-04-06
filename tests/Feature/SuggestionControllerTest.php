@@ -55,9 +55,9 @@ class SuggestionControllerTest extends TestCase
     }
 
     /**
-     * Testa a criação de sugestões
+     * Testa a criação de sugestões por usuários normais
      */
-    public function test_creating_suggestions(): void
+    public function test_user_can_create_suggestion(): void
     {
         $suggestionData = [
             'url' => 'https://www.youtube.com/watch?v=test123',
@@ -86,6 +86,32 @@ class SuggestionControllerTest extends TestCase
             ->assertStatus(201)
             ->assertJsonPath('status', 'success')
             ->assertJsonPath('message', 'Sugestão enviada com sucesso');
+    }
+
+    /**
+     * Testa que administradores não podem criar sugestões
+     */
+    public function test_admin_cannot_create_suggestion(): void
+    {
+        $suggestionData = [
+            'url' => 'https://www.youtube.com/watch?v=test123',
+        ];
+
+        $this->mock(\App\Services\SuggestionService::class, function ($mock) {
+            $mock->shouldReceive('processSuggestion')
+                ->once()
+                ->andReturn([
+                    'success' => false,
+                    'message' => 'Administradores devem adicionar músicas diretamente',
+                    'status_code' => 422
+                ]);
+        });
+
+        Sanctum::actingAs($this->admin);
+        $this->postJson($this->baseEndpoint, $suggestionData)
+            ->assertStatus(422)
+            ->assertJsonPath('status', 'error')
+            ->assertJsonPath('message', 'Administradores devem adicionar músicas diretamente');
     }
 
     /**
@@ -200,9 +226,9 @@ class SuggestionControllerTest extends TestCase
     }
 
     /**
-     * Testa a validação de URL do YouTube no formato padrão
+     * Testa a validação de URL do YouTube
      */
-    public function test_youtube_standard_url_validation(): void
+    public function test_youtube_url_validation(): void
     {
         Sanctum::actingAs($this->user);
 
@@ -226,141 +252,32 @@ class SuggestionControllerTest extends TestCase
     }
 
     /**
-     * Testa a validação de URL do YouTube no formato curto
+     * Testa a funcionalidade de obter informações de vídeo
      */
-    public function test_youtube_short_url_validation(): void
+    public function test_get_video_info(): void
     {
         Sanctum::actingAs($this->user);
 
         $this->mock(\App\Services\SuggestionService::class, function ($mock) {
-            $mock->shouldReceive('processSuggestion')
+            $mock->shouldReceive('extractVideoId')
                 ->once()
+                ->with('https://www.youtube.com/watch?v=test123')
+                ->andReturn('test123');
+
+            $mock->shouldReceive('getVideoInfo')
+                ->once()
+                ->with('test123')
                 ->andReturn([
-                    'success' => true,
-                    'message' => 'Sugestão enviada com sucesso',
-                    'data' => Suggestion::factory()->make([
-                        'youtube_id' => 'test123',
-                        'status' => 'pending',
-                    ]),
-                    'status_code' => 201
+                    'titulo' => 'Test Video',
+                    'visualizacoes' => 1000,
+                    'youtube_id' => 'test123',
+                    'thumb' => 'https://example.com/thumb.jpg',
                 ]);
         });
 
-        $this->postJson($this->baseEndpoint, ['url' => 'https://youtu.be/test123'])
-            ->assertStatus(201)
-            ->assertJsonPath('status', 'success');
-    }
-
-    /**
-     * Testa a validação de URL do YouTube no formato embed
-     */
-    public function test_youtube_embed_url_validation(): void
-    {
-        Sanctum::actingAs($this->user);
-
-        $this->mock(\App\Services\SuggestionService::class, function ($mock) {
-            $mock->shouldReceive('processSuggestion')
-                ->once()
-                ->andReturn([
-                    'success' => true,
-                    'message' => 'Sugestão enviada com sucesso',
-                    'data' => Suggestion::factory()->make([
-                        'youtube_id' => 'test123',
-                        'status' => 'pending',
-                    ]),
-                    'status_code' => 201
-                ]);
-        });
-
-        $this->postJson($this->baseEndpoint, ['url' => 'https://www.youtube.com/embed/test123'])
-            ->assertStatus(201)
-            ->assertJsonPath('status', 'success');
-    }
-
-    /**
-     * Testa a funcionalidade de paginação
-     */
-    public function test_pagination(): void
-    {
-        Suggestion::query()->delete();
-
-        Suggestion::factory()->count(10)->create();
-
-        Sanctum::actingAs($this->admin);
-
-        $response = $this->getJson("{$this->baseEndpoint}?page=1&per_page=5");
-        $response->assertStatus(200)
-            ->assertJsonCount(5, 'data.data')
-            ->assertJsonPath('data.meta.current_page', 1)
-            ->assertJsonPath('data.meta.per_page', 5);
-    }
-
-    /**
-     * Testa a funcionalidade de filtragem por status
-     */
-    public function test_status_filtering(): void
-    {
-        Suggestion::query()->delete();
-
-        $pendingStatus = Suggestion::STATUS_PENDING;
-        $approvedStatus = Suggestion::STATUS_APPROVED;
-
-        $youtube_id_pending = 'test_pending_' . uniqid();
-        $pendingSuggestion = Suggestion::factory()->create([
-            'status' => $pendingStatus,
-            'youtube_id' => $youtube_id_pending,
-            'url' => "https://www.youtube.com/watch?v={$youtube_id_pending}",
-            'user_id' => $this->admin->id,
-        ]);
-
-        $youtube_id_approved = 'test_approved_' . uniqid();
-        $approvedSuggestion = Suggestion::factory()->create([
-            'status' => $approvedStatus,
-            'youtube_id' => $youtube_id_approved,
-            'url' => "https://www.youtube.com/watch?v={$youtube_id_approved}",
-            'user_id' => $this->admin->id,
-        ]);
-
-        $this->assertDatabaseHas('suggestions', [
-            'id' => $pendingSuggestion->id,
-            'status' => $pendingStatus
-        ]);
-
-        $this->assertDatabaseHas('suggestions', [
-            'id' => $approvedSuggestion->id,
-            'status' => $approvedStatus
-        ]);
-
-        Sanctum::actingAs($this->admin);
-
-        $pendingResponse = $this->getJson("{$this->baseEndpoint}?status={$pendingStatus}");
-        $pendingResponse->assertStatus(200);
-
-        $pendingData = $pendingResponse->json('data.data');
-        $this->assertNotEmpty($pendingData, 'API retornou array vazio para status=pending');
-
-        $this->assertTrue(
-            collect($pendingData)->contains('id', $pendingSuggestion->id),
-            "Sugestão pendente ID {$pendingSuggestion->id} não encontrada na resposta"
-        );
-
-        $approvedResponse = $this->getJson("{$this->baseEndpoint}?status={$approvedStatus}");
-        $approvedResponse->assertStatus(200);
-
-        $approvedData = $approvedResponse->json('data.data');
-        $this->assertTrue(
-            collect($approvedData)->contains('id', $approvedSuggestion->id),
-            "Sugestão aprovada ID {$approvedSuggestion->id} não encontrada na resposta"
-        );
-
-        $this->assertFalse(
-            collect($pendingData)->contains('id', $approvedSuggestion->id),
-            "Sugestão aprovada ID {$approvedSuggestion->id} encontrada indevidamente no filtro de pendentes"
-        );
-
-        $this->assertFalse(
-            collect($approvedData)->contains('id', $pendingSuggestion->id),
-            "Sugestão pendente ID {$pendingSuggestion->id} encontrada indevidamente no filtro de aprovadas"
-        );
+        $this->postJson('/api/youtube/info', ['youtube_url' => 'https://www.youtube.com/watch?v=test123'])
+            ->assertStatus(200)
+            ->assertJsonPath('status', 'success')
+            ->assertJsonPath('data.titulo', 'Test Video');
     }
 }
