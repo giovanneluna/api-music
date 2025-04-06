@@ -41,6 +41,7 @@ return new class extends Migration
                 ->comment('Música associada após aprovação');
 
             $table->timestamps();
+            $table->softDeletes();
 
             $table->unique(['user_id', 'youtube_id']);
         });

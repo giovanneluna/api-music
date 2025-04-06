@@ -8,6 +8,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use App\Models\Suggestion;
 
 class MusicService
 {
@@ -290,5 +291,26 @@ class MusicService
             'likes' => 'sometimes|nullable|integer|min:0',
             'thumbnail' => 'sometimes|required|url',
         ]);
+    }
+
+    public function createMusicFromSuggestion(Suggestion $suggestion): ?Music
+    {
+        try {
+            $youtubeId = $suggestion->youtube_id;
+            $videoInfo = $this->getVideoInfoFromYouTube($youtubeId);
+
+            $music = Music::create([
+                'title' => $videoInfo['title'],
+                'views' => $videoInfo['views'],
+                'likes' => $videoInfo['likes'],
+                'youtube_id' => $youtubeId,
+                'thumbnail' => $videoInfo['thumbnail'],
+            ]);
+
+            return $music;
+        } catch (\Exception $e) {
+            report($e);
+            return null;
+        }
     }
 }

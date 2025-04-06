@@ -50,6 +50,22 @@ class MusicController extends Controller
         try {
             $validated = $this->musicService->validateCreateRequest($request);
 
+            if (isset($validated['youtube_id'])) {
+                $existingSuggestion = \App\Models\Suggestion::where('youtube_id', $validated['youtube_id'])
+                    ->where('status', \App\Models\Suggestion::STATUS_PENDING)
+                    ->first();
+
+                if ($existingSuggestion) {
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => 'Erro de validação',
+                        'errors' => [
+                            'youtube_id' => ['Este vídeo já existe como sugestão pendente. Por favor, aprove a sugestão em vez de criar uma nova música.']
+                        ]
+                    ], 422);
+                }
+            }
+
             $music = $this->musicService->createMusic($validated);
 
             return response()->json([

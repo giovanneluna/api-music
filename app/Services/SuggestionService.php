@@ -52,6 +52,15 @@ class SuggestionService
             ];
         }
 
+        $existingMusic = Music::where('youtube_id', $youtube_id)->first();
+        if ($existingMusic) {
+            return [
+                'success' => false,
+                'message' => 'Este vídeo já existe na biblioteca de músicas',
+                'status_code' => 422
+            ];
+        }
+
         try {
             $videoInfo = $this->getVideoInfo($youtube_id);
 
@@ -128,6 +137,7 @@ class SuggestionService
                     $music = Music::create([
                         'title' => $videoInfo['titulo'],
                         'views' => $videoInfo['visualizacoes'],
+                        'likes' => $videoInfo['likes'],
                         'youtube_id' => $suggestion->youtube_id,
                         'thumbnail' => $videoInfo['thumb'],
                     ]);
@@ -205,6 +215,7 @@ class SuggestionService
 
             $title = $snippet['title'];
             $viewCount = isset($statistics['viewCount']) ? (int)$statistics['viewCount'] : 0;
+            $likeCount = isset($statistics['likeCount']) ? (int)$statistics['likeCount'] : 0;
 
             $thumbnail = $snippet['thumbnails']['high']['url'] ??
                 ($snippet['thumbnails']['medium']['url'] ??
@@ -213,6 +224,7 @@ class SuggestionService
             return [
                 'titulo' => $title,
                 'visualizacoes' => $viewCount,
+                'likes' => $likeCount,
                 'youtube_id' => $videoId,
                 'thumb' => $thumbnail,
             ];

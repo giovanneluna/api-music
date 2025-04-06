@@ -24,8 +24,10 @@ class SuggestionController extends Controller
         $user = Auth::user();
         $perPage = $request->query('per_page', 15);
         $status = $request->query('status');
+        $sortBy = $request->query('sort_by', 'created_at');
+        $sortDirection = $request->query('sort_direction', 'desc');
 
-        $query = Suggestion::with('user')->orderBy('created_at', 'desc');
+        $query = Suggestion::with('user')->orderBy($sortBy, $sortDirection);
 
         if (!$user->admin) {
             $query->where('user_id', $user->id);
@@ -104,18 +106,13 @@ class SuggestionController extends Controller
         $user = Auth::user();
 
         if ($user->admin || $suggestion->user_id === $user->id) {
-            if ($suggestion->status === Suggestion::STATUS_PENDING) {
-                $suggestion->delete();
-                return response()->json([
-                    'status' => 'success',
-                    'message' => 'Sugestão excluída com sucesso',
-                ]);
-            }
-
+            // Permite a exclusão independente do status
+            // Usa soft delete para manter referências em Music, mas remove das listagens
+            $suggestion->delete();
             return response()->json([
-                'status' => 'error',
-                'message' => 'Não é possível excluir uma sugestão que já foi processada',
-            ], 422);
+                'status' => 'success',
+                'message' => 'Sugestão excluída com sucesso',
+            ]);
         }
 
         return response()->json([
@@ -144,6 +141,11 @@ class SuggestionController extends Controller
             }
 
             $videoInfo = $this->suggestionService->getVideoInfo($youtubeId);
+
+            // Garantir que o youtube_id está presente na resposta
+            if (!isset($videoInfo['youtube_id'])) {
+                $videoInfo['youtube_id'] = $youtubeId;
+            }
 
             return response()->json([
                 'status' => 'success',
