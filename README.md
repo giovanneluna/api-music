@@ -1,80 +1,80 @@
-# API Music - Sistema de Gerenciamento de Músicas
+# Clube do Tião API
 
-Este é um sistema de gerenciamento de músicas que permite aos usuários sugerir músicas do YouTube, e aos administradores aprovar ou rejeitar essas sugestões.
+Sistema de gerenciamento de músicas com sugestões de usuários e aprovação por administradores.
 
 ## Requisitos
 
-- Apartir do PHP 8.2
+- PHP 8.2
 - Composer
 - MySQL
-- Extensões PHP requeridas: BCMath, Ctype, Fileinfo, JSON, Mbstring, OpenSSL, PDO, Tokenizer, XML
+- Extensões do PHP:
+  - BCMath PHP Extension
+  - Ctype PHP Extension
+  - Fileinfo PHP Extension
+  - JSON PHP Extension
+  - Mbstring PHP Extension
+  - OpenSSL PHP Extension
+  - PDO PHP Extension
+  - Tokenizer PHP Extension
+  - XML PHP Extension
 
 ## Instalação
 
 1. Clone o repositório
-   ```
-   git clone https://github.com/giovanneluna/api-music.git
-   cd api-music
-   ```
-
-2. Instale as dependências
-   ```
+2. Instale as dependências:
+   ```bash
    composer install
    ```
-
-3. Configure o ambiente
-   - Copie o arquivo `.env.example` para `.env`
-   - Configure as variáveis de banco de dados no arquivo `.env`
-
-4. Execute migrações e seeders
+3. Configure o arquivo .env (copie de .env.example)
+   ```bash
+   cp .env.example .env
    ```
-   php artisan migrate && php artisan db:seed
+4. Configure o banco de dados no arquivo .env
+5. Execute as migrações e seeders:
+   ```bash
+   php artisan migrate --seed
    ```
-
-5. Inicie o servidor de desenvolvimento
-   ```
+6. Inicie o servidor de desenvolvimento:
+   ```bash
    php artisan serve
    ```
 
-## Usuário Administrador
+## Usuário administrador padrão
 
 Um usuário administrador é automaticamente criado pelo seeder:
 
-- **Email**: admin@sistema.com
-- **Senha**: senha_segura
+## Comandos úteis
 
-## Comandos Úteis
-
-### Promover um usuário para administrador
-
-```
-php artisan user:promote usuario@exemplo.com
+**Promover um usuário a administrador:**
+```bash
+php artisan user:promote {user_email}
 ```
 
-### Executar testes
-
-Para rodar todos os testes:
-```
+**Executar testes:**
+```bash
 php artisan test
 ```
 
-Para rodar testes específicos:
-```
-php artisan test --filter=AuthControllerTest
-php artisan test --filter=MusicControllerTest
-php artisan test --filter=SuggestionControllerTest
-php artisan test --filter=SuggestionStatusControllerTest
-```
+## Front-end
 
-## Endpoints da API
+O sistema possui um front-end desenvolvido em React que se comunica com esta API. O front-end oferece:
+- Interface responsiva (desktop e mobile)
+- Suporte a tema escuro (Dark Mode)
+- Componentes otimizados para dispositivos móveis
+- Visualização e gerenciamento de músicas e sugestões
+
+## API
+
+A API RESTful disponibiliza endpoints para autenticação, gerenciamento de músicas e sugestões.
 
 ### Autenticação
 
 #### Registro de Usuário
-- **URL**: `/api/auth/register`
+
+- **URL**: `/api/register`
 - **Método**: `POST`
-- **Autenticação**: Não
-- **Body**:
+- **Autenticação**: Não necessária
+- **Corpo da requisição**:
   ```json
   {
     "name": "Nome do Usuário",
@@ -83,19 +83,23 @@ php artisan test --filter=SuggestionStatusControllerTest
     "password_confirmation": "senha123"
   }
   ```
+
 - **Resposta (201)**:
   ```json
   {
     "status": "success",
-    "message": "Usuario registrado com sucesso",
+    "message": "Usuário registrado com sucesso",
     "data": {
-      "id": 1,
-      "name": "Nome do Usuário",
-      "email": "usuario@exemplo.com",
-      "created_at": "2023-01-01T00:00:00.000000Z",
-      "is_admin": false
-    },
-    "token": "1|abcdefghijklmnopqrstuvwxyz"
+      "user": {
+        "id": 1,
+        "name": "Nome do Usuário",
+        "email": "usuario@exemplo.com",
+        "role": "user",
+        "created_at": "2023-01-01T00:00:00.000000Z",
+        "updated_at": "2023-01-01T00:00:00.000000Z"
+      },
+      "token": "TOKEN_JWT"
+    }
   }
   ```
 
