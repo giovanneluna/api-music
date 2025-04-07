@@ -2,12 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\Music\CreateMusicRequest;
+use App\Http\Requests\Music\UpdateMusicRequest;
 use App\Models\Music;
 use App\Services\MusicService;
 use App\Http\Resources\MusicResource;
+use App\Models\Suggestion;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Validation\ValidationException;
 
 class MusicController extends Controller
 {
@@ -45,24 +48,27 @@ class MusicController extends Controller
         ]);
     }
 
-    public function store(Request $request): JsonResponse
+    public function store(CreateMusicRequest $request): JsonResponse
     {
         try {
-            $validated = $this->musicService->validateCreateRequest($request);
+            $validated = $request->validated();
 
-            if (isset($validated['youtube_id'])) {
-                $existingSuggestion = \App\Models\Suggestion::where('youtube_id', $validated['youtube_id'])
-                    ->where('status', \App\Models\Suggestion::STATUS_PENDING)
-                    ->first();
+            if (count($validated) === 1 && isset($validated['youtube_id'])) {
+            } else {
+                if (isset($validated['youtube_id'])) {
+                    $existingSuggestion = Suggestion::where('youtube_id', $validated['youtube_id'])
+                        ->where('status', Suggestion::STATUS_PENDING)
+                        ->first();
 
-                if ($existingSuggestion) {
-                    return response()->json([
-                        'status' => 'error',
-                        'message' => 'Erro de validação',
-                        'errors' => [
-                            'youtube_id' => ['Este vídeo já existe como sugestão pendente. Por favor, aprove a sugestão em vez de criar uma nova música.']
-                        ]
-                    ], 422);
+                    if ($existingSuggestion) {
+                        return response()->json([
+                            'status' => 'error',
+                            'message' => 'Erro de validação',
+                            'errors' => [
+                                'youtube_id' => ['Este vídeo já existe como sugestão pendente. Por favor, aprove a sugestão em vez de criar uma nova música.']
+                            ]
+                        ], 422);
+                    }
                 }
             }
 
@@ -73,12 +79,6 @@ class MusicController extends Controller
                 'message' => 'Música adicionada com sucesso',
                 'data' => new MusicResource($music),
             ], 201);
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Erro de validação',
-                'errors' => $e->errors(),
-            ], 422);
         } catch (\Exception $e) {
             $message = $e->getMessage();
 
@@ -109,10 +109,10 @@ class MusicController extends Controller
         }
     }
 
-    public function update(Request $request, Music $music): JsonResponse
+    public function update(UpdateMusicRequest $request, Music $music): JsonResponse
     {
         try {
-            $validated = $this->musicService->validateUpdateRequest($request, $music);
+            $validated = $request->validated();
 
             $music = $this->musicService->updateMusic($music, $validated);
 
@@ -121,7 +121,7 @@ class MusicController extends Controller
                 'message' => 'Música atualizada com sucesso',
                 'data' => new MusicResource($music),
             ]);
-        } catch (\Illuminate\Validation\ValidationException $e) {
+        } catch (ValidationException $e) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Erro de validação',

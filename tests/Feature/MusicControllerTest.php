@@ -132,7 +132,7 @@ class MusicControllerTest extends TestCase
             ->assertJsonPath('message', 'Música adicionada com sucesso')
             ->assertJsonPath('data.title', $musicData['title']);
 
-        $this->assertDatabaseHas('music', [
+        $this->assertDatabaseHas('musics', [
             'title' => $musicData['title'],
             'youtube_id' => $musicData['youtube_id'],
             'likes' => 500,
@@ -173,7 +173,7 @@ class MusicControllerTest extends TestCase
             ->assertJsonPath('message', 'Música adicionada com sucesso')
             ->assertJsonPath('data.title', 'Test Music from API');
 
-        $this->assertDatabaseHas('music', [
+        $this->assertDatabaseHas('musics', [
             'youtube_id' => $youtubeId,
             'title' => 'Test Music from API',
             'views' => 5000,
@@ -241,7 +241,7 @@ class MusicControllerTest extends TestCase
             ->assertJsonPath('data.views', 5000)
             ->assertJsonPath('data.likes', 1200);
 
-        $this->assertDatabaseHas('music', [
+        $this->assertDatabaseHas('musics', [
             'id' => $music->id,
             'title' => 'Updated Music Title',
             'views' => 5000,
@@ -287,7 +287,7 @@ class MusicControllerTest extends TestCase
             ->assertJsonPath('data.views', 10000)
             ->assertJsonPath('data.likes', 2000);
 
-        $this->assertDatabaseHas('music', [
+        $this->assertDatabaseHas('musics', [
             'id' => $music->id,
             'youtube_id' => $newYoutubeId,
             'title' => 'Updated Music from API',
@@ -311,7 +311,7 @@ class MusicControllerTest extends TestCase
             ->assertJsonPath('status', 'success')
             ->assertJsonPath('message', 'Música excluída com sucesso');
 
-        $this->assertDatabaseMissing('music', [
+        $this->assertDatabaseMissing('musics', [
             'id' => $music->id,
         ]);
     }
@@ -357,7 +357,7 @@ class MusicControllerTest extends TestCase
             ->assertJsonPath('data.views', 25000)
             ->assertJsonPath('data.likes', 3500);
 
-        $this->assertDatabaseHas('music', [
+        $this->assertDatabaseHas('musics', [
             'id' => $music->id,
             'title' => 'Fresh Title from API',
             'views' => 25000,

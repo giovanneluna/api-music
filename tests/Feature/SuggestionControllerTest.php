@@ -148,48 +148,63 @@ class SuggestionControllerTest extends TestCase
     {
         $pendingSuggestion = Suggestion::factory()->create([
             'user_id' => $this->user->id,
-            'status' => 'pending',
+            'status' => Suggestion::STATUS_PENDING,
         ]);
 
         $approvedSuggestion = Suggestion::factory()->create([
             'user_id' => $this->user->id,
-            'status' => 'approved',
+            'status' => Suggestion::STATUS_APPROVED,
         ]);
 
-        $otherUserSuggestion = Suggestion::factory()->create([
+        $rejectedSuggestion = Suggestion::factory()->create([
+            'user_id' => $this->user->id,
+            'status' => Suggestion::STATUS_REJECTED,
+        ]);
+
+        $otherUserApprovedSuggestion = Suggestion::factory()->create([
             'user_id' => User::factory()->create()->id,
-            'status' => 'pending',
+            'status' => Suggestion::STATUS_APPROVED,
         ]);
 
-        $this->deleteJson("{$this->baseEndpoint}/{$pendingSuggestion->id}")
+        $this->deleteJson("{$this->baseEndpoint}/{$approvedSuggestion->id}")
             ->assertStatus(401);
 
         Sanctum::actingAs($this->user);
 
         $this->deleteJson("{$this->baseEndpoint}/{$pendingSuggestion->id}")
+            ->assertStatus(422)
+            ->assertJsonPath('status', 'error')
+            ->assertJsonPath('message', 'Apenas sugestões aprovadas ou reprovadas podem ser excluídas');
+
+        $this->deleteJson("{$this->baseEndpoint}/{$approvedSuggestion->id}")
             ->assertStatus(200)
             ->assertJsonPath('status', 'success')
             ->assertJsonPath('message', 'Sugestão excluída com sucesso');
 
-        $this->assertDatabaseMissing('suggestions', [
-            'id' => $pendingSuggestion->id,
+        $this->assertSoftDeleted('suggestions', [
+            'id' => $approvedSuggestion->id,
         ]);
 
-        $this->deleteJson("{$this->baseEndpoint}/{$approvedSuggestion->id}")
-            ->assertStatus(422)
-            ->assertJsonPath('status', 'error');
+        $this->deleteJson("{$this->baseEndpoint}/{$rejectedSuggestion->id}")
+            ->assertStatus(200)
+            ->assertJsonPath('status', 'success')
+            ->assertJsonPath('message', 'Sugestão excluída com sucesso');
 
-        $this->deleteJson("{$this->baseEndpoint}/{$otherUserSuggestion->id}")
+        $this->assertSoftDeleted('suggestions', [
+            'id' => $rejectedSuggestion->id,
+        ]);
+
+        $this->deleteJson("{$this->baseEndpoint}/{$otherUserApprovedSuggestion->id}")
             ->assertStatus(403);
 
         Sanctum::actingAs($this->admin);
-        $this->deleteJson("{$this->baseEndpoint}/{$otherUserSuggestion->id}")
+        $this->deleteJson("{$this->baseEndpoint}/{$otherUserApprovedSuggestion->id}")
             ->assertStatus(200)
             ->assertJsonPath('status', 'success')
             ->assertJsonPath('message', 'Sugestão excluída com sucesso');
 
-        $this->assertDatabaseMissing('suggestions', [
-            'id' => $otherUserSuggestion->id,
+        $this->assertSoftDeleted('suggestions', [
+            'id' => $otherUserApprovedSuggestion->id,
         ]);
     }
 

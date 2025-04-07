@@ -36,7 +36,7 @@ return new class extends Migration
 
             $table->foreignId('music_id')
                 ->nullable()
-                ->constrained('music')
+                ->constrained('musics')
                 ->onDelete('set null')
                 ->comment('Música associada após aprovação');
 

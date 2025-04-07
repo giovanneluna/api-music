@@ -200,7 +200,7 @@ class SuggestionStatusControllerTest extends TestCase
 
         $response->assertStatus(200);
 
-        $this->assertDatabaseHas('music', [
+        $this->assertDatabaseHas('musics', [
             'id' => $music->id,
             'youtube_id' => $youtube_id
         ]);

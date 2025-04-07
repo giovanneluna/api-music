@@ -9,7 +9,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('music', function (Blueprint $table) {
+        Schema::create('musics', function (Blueprint $table) {
             $table->id();
             $table->string('title')->comment('Título da música');
             $table->bigInteger('views')->default(0)->comment('Número de visualizações no YouTube');
@@ -22,6 +22,6 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists('music');
+        Schema::dropIfExists('musics');
     }
 };

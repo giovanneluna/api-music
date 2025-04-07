@@ -2,9 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\Suggestion\StoreSuggestionRequest;
+use App\Http\Requests\Suggestion\GetVideoInfoRequest;
 use App\Models\Suggestion;
 use App\Services\SuggestionService;
-use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -61,15 +62,8 @@ class SuggestionController extends Controller
     }
 
 
-    public function store(Request $request): JsonResponse
+    public function store(StoreSuggestionRequest $request): JsonResponse
     {
-        $validation = $request->validate([
-            'url' => 'required|url',
-        ], [
-            'url.required' => 'A URL do YouTube é obrigatória',
-            'url.url' => 'Uma URL válida deve ser fornecida'
-        ]);
-
         $result = $this->suggestionService->processSuggestion($request);
 
         return response()->json(
@@ -105,10 +99,21 @@ class SuggestionController extends Controller
     {
         $user = Auth::user();
 
-        if ($user->admin || $suggestion->user_id === $user->id) {
-            // Permite a exclusão independente do status
-            // Usa soft delete para manter referências em Music, mas remove das listagens
-            $suggestion->delete();
+        if ($suggestion->user_id !== Auth::id() && !$user->admin) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Você não tem permissão para excluir esta sugestão'
+            ], 403);
+        }
+
+        if ($suggestion->status === Suggestion::STATUS_PENDING) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Apenas sugestões aprovadas ou reprovadas podem ser excluídas',
+            ], 422);
+        }
+
+        if ($suggestion->delete()) {
             return response()->json([
                 'status' => 'success',
                 'message' => 'Sugestão excluída com sucesso',
@@ -117,19 +122,12 @@ class SuggestionController extends Controller
 
         return response()->json([
             'status' => 'error',
-            'message' => 'Não autorizado a excluir esta sugestão',
-        ], 403);
+            'message' => 'Erro ao excluir sugestão',
+        ], 500);
     }
 
-    public function getVideoInfo(Request $request): JsonResponse
+    public function getVideoInfo(GetVideoInfoRequest $request): JsonResponse
     {
-        $validation = $request->validate([
-            'youtube_url' => 'required|url',
-        ], [
-            'youtube_url.required' => 'A URL do YouTube é obrigatória',
-            'youtube_url.url' => 'Uma URL válida deve ser fornecida'
-        ]);
-
         try {
             $youtubeId = $this->suggestionService->extractVideoId($request->youtube_url);
 
@@ -142,7 +140,6 @@ class SuggestionController extends Controller
 
             $videoInfo = $this->suggestionService->getVideoInfo($youtubeId);
 
-            // Garantir que o youtube_id está presente na resposta
             if (!isset($videoInfo['youtube_id'])) {
                 $videoInfo['youtube_id'] = $youtubeId;
             }

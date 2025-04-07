@@ -2,7 +2,8 @@
 
 namespace App\Models;
 
-use App\Services\MusicService;
+use App\Services\Musics\FormatViewsService;
+use App\Services\Musics\FormatLikesService;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -10,7 +11,7 @@ class Music extends Model
 {
     use HasFactory;
 
-    protected $table = 'music';
+    protected $table = 'musics';
 
     protected $fillable = [
         'title',
@@ -32,7 +33,7 @@ class Music extends Model
 
     public function getViewsFormattedAttribute(): string
     {
-        return app(MusicService::class)->formatViews($this->views);
+        return app(FormatViewsService::class)->format($this->views);
     }
 
     public function getLikesFormattedAttribute(): string
@@ -40,7 +41,7 @@ class Music extends Model
         if ($this->likes === null) {
             return '0';
         }
-        return app(MusicService::class)->formatLikes($this->likes);
+        return app(FormatLikesService::class)->format($this->likes);
     }
 
     public function suggestions()
